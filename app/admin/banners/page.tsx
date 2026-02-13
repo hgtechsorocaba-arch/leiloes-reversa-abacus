@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Image as ImageIcon, Plus, Trash2, Upload, Sparkles, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Plus, Trash2, Upload, Sparkles, X, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import Image from 'next/image';
@@ -49,6 +49,11 @@ export default function AdminBannersPage() {
     titulo: '',
     link: '',
   });
+  
+  // Estados para edição de banner
+  const [editModal, setEditModal] = useState(false);
+  const [editBanner, setEditBanner] = useState<Banner | null>(null);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -96,7 +101,7 @@ export default function AdminBannersPage() {
         body: JSON.stringify({
           fileName: file.name,
           contentType: file.type,
-          forSignup: true,
+          isPublic: true,
         }),
       });
       
@@ -133,7 +138,6 @@ export default function AdminBannersPage() {
         body: JSON.stringify({
           cloud_storage_path,
           isPublic: true,
-          forSignup: true,
         }),
       });
       
@@ -144,14 +148,12 @@ export default function AdminBannersPage() {
       
       const { url } = await completeRes.json();
       
-      // 4. Criar banner automaticamente
-      const fileName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-      
+      // 4. Criar banner automaticamente (sem título)
       const bannerRes = await fetch('/api/admin/banners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          titulo: fileName,
+          titulo: null,
           imageUrl: url,
           link: null,
           ordem: banners.length,
@@ -298,6 +300,42 @@ export default function AdminBannersPage() {
     }
   };
 
+  const handleAbrirEdicao = (banner: Banner) => {
+    setEditBanner({ ...banner });
+    setEditModal(true);
+  };
+
+  const handleSalvarEdicao = async () => {
+    if (!editBanner) return;
+    
+    setSalvandoEdicao(true);
+    try {
+      const res = await fetch('/api/admin/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editBanner.id,
+          titulo: editBanner.titulo || null,
+          link: editBanner.link || null,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Banner atualizado!');
+        setEditModal(false);
+        setEditBanner(null);
+        loadBanners();
+      } else {
+        toast.error('Erro ao atualizar banner');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      toast.error('Erro ao atualizar banner');
+    } finally {
+      setSalvandoEdicao(false);
+    }
+  };
+
   const handleMoverBanner = async (banner: Banner, direcao: 'up' | 'down') => {
     const index = banners.findIndex(b => b.id === banner.id);
     if (direcao === 'up' && index === 0) return;
@@ -419,6 +457,14 @@ export default function AdminBannersPage() {
                         onCheckedChange={() => handleToggleAtivo(banner)}
                       />
                     </div>
+                    <Button
+                      onClick={() => handleAbrirEdicao(banner)}
+                      variant="outline"
+                      size="sm"
+                      title="Editar título e link"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
                     <Button
                       onClick={() => handleDeletarBanner(banner.id)}
                       disabled={deletando === banner.id}
@@ -586,6 +632,71 @@ export default function AdminBannersPage() {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Edição de Banner */}
+        <Dialog open={editModal} onOpenChange={setEditModal}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar Banner</DialogTitle>
+            </DialogHeader>
+            {editBanner && (
+              <div className="space-y-4">
+                <div className="w-full h-32 relative bg-gray-100 rounded overflow-hidden">
+                  <Image
+                    src={editBanner.imageUrl}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-titulo">Título (opcional)</Label>
+                  <Input
+                    id="edit-titulo"
+                    value={editBanner.titulo || ''}
+                    onChange={(e) => setEditBanner({ ...editBanner, titulo: e.target.value })}
+                    placeholder="Ex: Promoção de Verão"
+                  />
+                  <p className="text-xs text-gray-500">Deixe vazio para exibir apenas a imagem</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="edit-link">Link (opcional)</Label>
+                  <Input
+                    id="edit-link"
+                    value={editBanner.link || ''}
+                    onChange={(e) => setEditBanner({ ...editBanner, link: e.target.value })}
+                    placeholder="Ex: /lotes ou https://..."
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditModal(false);
+                      setEditBanner(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSalvarEdicao}
+                    disabled={salvandoEdicao}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {salvandoEdicao ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+                    ) : (
+                      'Salvar'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

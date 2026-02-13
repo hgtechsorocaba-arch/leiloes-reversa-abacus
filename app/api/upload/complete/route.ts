@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getFileUrl } from '@/lib/s3';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,18 +13,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
     }
 
-    // Para cadastro, apenas retorna o path (será salvo quando finalizar o cadastro)
-    if (forSignup) {
+    const session = await getServerSession(authOptions);
+    const isAdmin = session?.user?.email === 'admin@reversa.com';
+
+    // Para cadastro ou admin, apenas retorna a URL
+    if (forSignup || isAdmin || isPublic) {
+      const url = await getFileUrl(cloud_storage_path, isPublic ?? false);
       return NextResponse.json({
         message: 'Upload concluído com sucesso',
         cloud_storage_path,
         isPublic,
+        url,
       });
     }
 
     // Para usuários logados, verifica autenticação
-    const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
@@ -38,10 +42,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const url = await getFileUrl(cloud_storage_path, isPublic ?? false);
+    
     return NextResponse.json({
       message: 'Upload concluído com sucesso',
       cloud_storage_path,
       isPublic,
+      url,
     });
   } catch (error) {
     console.error('Erro ao completar upload:', error);

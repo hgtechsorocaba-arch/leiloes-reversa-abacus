@@ -171,7 +171,7 @@ export default function AdminLotesPage() {
           body: JSON.stringify({
             fileName: file.name,
             contentType: file.type,
-            forSignup: true, // Usar o mesmo endpoint
+            isPublic: true,
           }),
         });
         
@@ -209,7 +209,6 @@ export default function AdminLotesPage() {
           body: JSON.stringify({
             cloud_storage_path,
             isPublic: true,
-            forSignup: true,
           }),
         });
         
@@ -248,7 +247,7 @@ export default function AdminLotesPage() {
         body: JSON.stringify({
           fileName: file.name,
           contentType: file.type,
-          forSignup: true,
+          isPublic: true,
         }),
       });
       
@@ -283,7 +282,6 @@ export default function AdminLotesPage() {
         body: JSON.stringify({
           cloud_storage_path,
           isPublic: true,
-          forSignup: true,
         }),
       });
       
@@ -599,7 +597,7 @@ export default function AdminLotesPage() {
           body: JSON.stringify({
             fileName: file.name,
             contentType: file.type,
-            forSignup: true,
+            isPublic: true,
           }),
         });
         
@@ -628,7 +626,6 @@ export default function AdminLotesPage() {
           body: JSON.stringify({
             cloud_storage_path,
             isPublic: true,
-            forSignup: true,
           }),
         });
         
